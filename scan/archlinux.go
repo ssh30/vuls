@@ -54,16 +54,16 @@ func detectArchLinux(c config.ServerInfo) (itsMe bool, archlinux osTypeInterface
 	c.Distro = config.Distro{Family: config.ArchLinux}
 
 	if r := exec(c, "ls /etc/arch-release", noSudo); r.isSuccess() {
-		if strings.Contains(strings.ToLower(r.Stdout), config.ArchLinux) == true {
-			if b := exec(c, "cat /etc/arch-release", noSudo); b.isSuccess() {
-				rel := strings.TrimSpace(b.Stdout)
-				archlinux.setDistro(config.ArchLinux, rel)
-				return true, archlinux
-			}
+		//if strings.Contains(strings.ToLower(r.Stdout), config.ArchLinux) == true {
+		if b := exec(c, "head -n 1  /etc/arch-release", noSudo); b.isSuccess() {
+			rel := strings.TrimSpace(b.Stdout)
+			archlinux.setDistro(config.ArchLinux, rel)
+			return true, archlinux
 		}
+		//}
 	}
 	util.Log.Debugf("Not ArchLinux. servername: %s", c.ServerName)
-	return false, bsd
+	return false, archlinux
 }
 
 func (o *archlinux) checkIfSudoNoPasswd() error {

@@ -102,7 +102,7 @@ func detectOS(c config.ServerInfo) (osType osTypeInterface) {
 		return
 	}
 
-	if itsMe, osType = detectArchlinux(c); itsMe {
+	if itsMe, osType = detectArchLinux(c); itsMe {
 		util.Log.Debugf("Arch GNU/Linux. Host:  %s:%s", c.Host, c.Port)
 		return
 	}
