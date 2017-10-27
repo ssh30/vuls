@@ -31,7 +31,7 @@ type archlinux struct {
 	base
 }
 
-// NewBSD constructor
+// NewArchLinux  constructor
 func newArchLinux(c config.ServerInfo) *archlinux {
 	d := &archlinux{
 		base: base{
@@ -48,17 +48,17 @@ func newArchLinux(c config.ServerInfo) *archlinux {
 
 //https://github.com/mizzy/specinfra/blob/master/lib/specinfra/helper/detect_os/arch.rb
 func detectArchLinux(c config.ServerInfo) (itsMe bool, archlinux osTypeInterface) {
-	bsd = newArchLinux(c)
+	archlinux = newArchLinux(c)
 
 	// Prevent from adding `set -o pipefail` option
 	c.Distro = config.Distro{Family: config.ArchLinux}
 
-	if r := exec(c, "uname", noSudo); r.isSuccess() {
+	if r := exec(c, "ls /etc/arch-release", noSudo); r.isSuccess() {
 		if strings.Contains(strings.ToLower(r.Stdout), config.ArchLinux) == true {
-			if b := exec(c, "freebsd-version", noSudo); b.isSuccess() {
+			if b := exec(c, "cat /etc/arch-release", noSudo); b.isSuccess() {
 				rel := strings.TrimSpace(b.Stdout)
-				bsd.setDistro(config.ArchLinux, rel)
-				return true, bsd
+				archlinux.setDistro(config.ArchLinux, rel)
+				return true, archlinux
 			}
 		}
 	}
@@ -147,7 +147,7 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 		return nil, nil
 	}
 
-	var packAdtRslt []pkgAuditResult
+	var packAdtRslt []pkgAuditResult2
 	blocks := o.splitIntoBlocks(r.Stdout)
 	for _, b := range blocks {
 		name, cveIDs, vulnID := o.parseBlock(b)
@@ -158,19 +158,19 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 		if !found {
 			return nil, fmt.Errorf("Vulnerable package: %s is not found", name)
 		}
-		packAdtRslt = append(packAdtRslt, pkgAuditResult{
+		packAdtRslt = append(packAdtRslt, pkgAuditResult2{
 			pack: pack,
-			vulnIDCveIDs: vulnIDCveIDs{
+			vulnIDCveIDs2: vulnIDCveIDs2{
 				vulnID: vulnID,
 				cveIDs: cveIDs,
 			},
 		})
 	}
 
-	// { CVE ID: []pkgAuditResult }
-	cveIDAdtMap := make(map[string][]pkgAuditResult)
+	// { CVE ID: []pkgAuditResult2 }
+	cveIDAdtMap := make(map[string][]pkgAuditResult2)
 	for _, p := range packAdtRslt {
-		for _, cid := range p.vulnIDCveIDs.cveIDs {
+		for _, cid := range p.vulnIDCveIDs2.cveIDs {
 			cveIDAdtMap[cid] = append(cveIDAdtMap[cid], p)
 		}
 	}
@@ -185,7 +185,7 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 		disAdvs := []models.DistroAdvisory{}
 		for _, r := range cveIDAdtMap[cveID] {
 			disAdvs = append(disAdvs, models.DistroAdvisory{
-				AdvisoryID: r.vulnIDCveIDs.vulnID,
+				AdvisoryID: r.vulnIDCveIDs2.vulnID,
 			})
 		}
 
@@ -243,14 +243,14 @@ func (o *archlinux) parsePkgVersion(stdout string) models.Packages {
 	return packs
 }
 
-type vulnIDCveIDs struct {
+type vulnIDCveIDs2 struct {
 	vulnID string
 	cveIDs []string
 }
 
-type pkgAuditResult struct {
-	pack         models.Package
-	vulnIDCveIDs vulnIDCveIDs
+type pkgAuditResult2 struct {
+	pack          models.Package
+	vulnIDCveIDs2 vulnIDCveIDs2
 }
 
 func (o *archlinux) splitIntoBlocks(stdout string) (blocks []string) {
