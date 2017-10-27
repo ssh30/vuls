@@ -32,7 +32,7 @@ type archlinux struct {
 }
 
 // NewBSD constructor
-func newArch(c config.ServerInfo) *archlinux {
+func newArchLinux(c config.ServerInfo) *archlinux {
 	d := &archlinux{
 		base: base{
 			osPackages: osPackages{
@@ -48,7 +48,7 @@ func newArch(c config.ServerInfo) *archlinux {
 
 //https://github.com/mizzy/specinfra/blob/master/lib/specinfra/helper/detect_os/arch.rb
 func detectArchLinux(c config.ServerInfo) (itsMe bool, archlinux osTypeInterface) {
-	bsd = newArch(c)
+	bsd = newArchLinux(c)
 
 	// Prevent from adding `set -o pipefail` option
 	c.Distro = config.Distro{Family: config.ArchLinux}
