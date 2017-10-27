@@ -27,13 +27,13 @@ import (
 )
 
 // inherit OsTypeInterface
-type bsd struct {
+type archlinux struct {
 	base
 }
 
 // NewBSD constructor
-func newArch(c config.ServerInfo) *bsd {
-	d := &bsd{
+func newArch(c config.ServerInfo) *archlinux {
+	d := &archlinux{
 		base: base{
 			osPackages: osPackages{
 				Packages:  models.Packages{},
@@ -47,7 +47,7 @@ func newArch(c config.ServerInfo) *bsd {
 }
 
 //https://github.com/mizzy/specinfra/blob/master/lib/specinfra/helper/detect_os/arch.rb
-func detectArchLinux(c config.ServerInfo) (itsMe bool, bsd osTypeInterface) {
+func detectArchLinux(c config.ServerInfo) (itsMe bool, archlinux osTypeInterface) {
 	bsd = newArch(c)
 
 	// Prevent from adding `set -o pipefail` option
@@ -66,18 +66,18 @@ func detectArchLinux(c config.ServerInfo) (itsMe bool, bsd osTypeInterface) {
 	return false, bsd
 }
 
-func (o *bsd) checkIfSudoNoPasswd() error {
+func (o *archlinux) checkIfSudoNoPasswd() error {
 	// FreeBSD doesn't need root privilege
 	o.log.Infof("sudo ... No need")
 	return nil
 }
 
-func (o *bsd) checkDependencies() error {
+func (o *archlinux) checkDependencies() error {
 	o.log.Infof("Dependencies... No need")
 	return nil
 }
 
-func (o *bsd) scanPackages() error {
+func (o *archlinux) scanPackages() error {
 	// collect the running kernel information
 	release, version, err := o.runningKernel()
 	if err != nil {
@@ -112,7 +112,7 @@ func (o *bsd) scanPackages() error {
 	return nil
 }
 
-func (o *bsd) rebootRequired() (bool, error) {
+func (o *archlinux) rebootRequired() (bool, error) {
 	r := o.exec("freebsd-version -k", noSudo)
 	if !r.isSuccess() {
 		return false, fmt.Errorf("Failed to SSH: %s", r)
@@ -120,7 +120,7 @@ func (o *bsd) rebootRequired() (bool, error) {
 	return o.Kernel.Release != strings.TrimSpace(r.Stdout), nil
 }
 
-func (o *bsd) scanInstalledPackages() (models.Packages, error) {
+func (o *archlinux) scanInstalledPackages() (models.Packages, error) {
 	cmd := util.PrependProxyEnv("pkg version -v")
 	r := o.exec(cmd, noSudo)
 	if !r.isSuccess() {
@@ -129,7 +129,7 @@ func (o *bsd) scanInstalledPackages() (models.Packages, error) {
 	return o.parsePkgVersion(r.Stdout), nil
 }
 
-func (o *bsd) scanUnsecurePackages() (models.VulnInfos, error) {
+func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 	const vulndbPath = "/tmp/vuln.db"
 	cmd := "rm -f " + vulndbPath
 	r := o.exec(cmd, noSudo)
@@ -205,7 +205,7 @@ func (o *bsd) scanUnsecurePackages() (models.VulnInfos, error) {
 	return vinfos, nil
 }
 
-func (o *bsd) parsePkgVersion(stdout string) models.Packages {
+func (o *archlinux) parsePkgVersion(stdout string) models.Packages {
 	packs := models.Packages{}
 	lines := strings.Split(stdout, "\n")
 	for _, l := range lines {
@@ -253,7 +253,7 @@ type pkgAuditResult struct {
 	vulnIDCveIDs vulnIDCveIDs
 }
 
-func (o *bsd) splitIntoBlocks(stdout string) (blocks []string) {
+func (o *archlinux) splitIntoBlocks(stdout string) (blocks []string) {
 	lines := strings.Split(stdout, "\n")
 	block := []string{}
 	for _, l := range lines {
@@ -272,7 +272,7 @@ func (o *bsd) splitIntoBlocks(stdout string) (blocks []string) {
 	return
 }
 
-func (o *bsd) parseBlock(block string) (packName string, cveIDs []string, vulnID string) {
+func (o *archlinux) parseBlock(block string) (packName string, cveIDs []string, vulnID string) {
 	lines := strings.Split(block, "\n")
 	for _, l := range lines {
 		if strings.HasSuffix(l, " is vulnerable:") {
