@@ -56,6 +56,9 @@ const (
 	// FreeBSD is
 	FreeBSD = "freebsd"
 
+	// ArchLinux is
+	ArchLinux = "archlinux"
+
 	// Raspbian is
 	Raspbian = "raspbian"
 
