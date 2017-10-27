@@ -102,6 +102,11 @@ func detectOS(c config.ServerInfo) (osType osTypeInterface) {
 		return
 	}
 
+	if itsMe, osType = detectArchlinux(c); itsMe {
+		util.Log.Debugf("Arch GNU/Linux. Host:  %s:%s", c.Host, c.Port)
+		return
+	}
+
 	//TODO darwin https://github.com/mizzy/specinfra/blob/master/lib/specinfra/helper/detect_os/darwin.rb
 	osType.setErrs([]error{fmt.Errorf("Unknown OS Type")})
 	return
