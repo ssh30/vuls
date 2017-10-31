@@ -126,15 +126,25 @@ func (o *archlinux) scanPackages() error {
 }
 
 func (o *archlinux) rebootRequired() (bool, error) {
-	r := o.exec("freebsd-version -k", noSudo)
-	if !r.isSuccess() {
+	cmd := util.PrependProxyEnv("[[ $(pacman -Q linux | cut -d \" \" -f 2) > $(uname -r) ]] && echo \"reboot\"")
+
+	r := o.exec(cmd, noSudo)
+	if r.isSuccess() {
 		return false, fmt.Errorf("Failed to SSH: %s", r)
 	}
-	return o.Kernel.Release != strings.TrimSpace(r.Stdout), nil
+	switch r.ExitStatus {
+	case 0:
+		return true, nil
+	case 1:
+		return false, nil
+	default:
+		return false, fmt.Errorf("Failed to check reboot reauired: %s", r)
+
+	}
 }
 
 func (o *archlinux) scanInstalledPackages() (models.Packages, error) {
-	cmd := util.PrependProxyEnv("pkg version -v")
+	cmd := util.PrependProxyEnv("pacman -Q")
 	r := o.exec(cmd, noSudo)
 	if !r.isSuccess() {
 		return nil, fmt.Errorf("Failed to SSH: %s", r)
@@ -143,15 +153,8 @@ func (o *archlinux) scanInstalledPackages() (models.Packages, error) {
 }
 
 func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
-	const vulndbPath = "/tmp/vuln.db"
-	cmd := "rm -f " + vulndbPath
+	cmd := util.PrependProxyEnv("arch-audit -f \" %n %c\"")
 	r := o.exec(cmd, noSudo)
-	if !r.isSuccess(0) {
-		return nil, fmt.Errorf("Failed to SSH: %s", r)
-	}
-
-	cmd = util.PrependProxyEnv("pkg audit -F -r -f " + vulndbPath)
-	r = o.exec(cmd, noSudo)
 	if !r.isSuccess(0, 1) {
 		return nil, fmt.Errorf("Failed to SSH: %s", r)
 	}
@@ -160,10 +163,10 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 		return nil, nil
 	}
 
-	var packAdtRslt []pkgAuditResult2
+	var packAdtRslt []pkgAuditResult
 	blocks := o.splitIntoBlocks(r.Stdout)
 	for _, b := range blocks {
-		name, cveIDs, vulnID := o.parseBlock(b)
+		name, cveIDs, _ := o.parseBlock(b)
 		if len(cveIDs) == 0 {
 			continue
 		}
@@ -171,19 +174,16 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 		if !found {
 			return nil, fmt.Errorf("Vulnerable package: %s is not found", name)
 		}
-		packAdtRslt = append(packAdtRslt, pkgAuditResult2{
+		packAdtRslt = append(packAdtRslt, pkgAuditResult{
 			pack: pack,
-			vulnIDCveIDs2: vulnIDCveIDs2{
-				vulnID: vulnID,
+			vulnIDCveIDs: vulnIDCveIDs{
 				cveIDs: cveIDs,
 			},
 		})
 	}
-
-	// { CVE ID: []pkgAuditResult2 }
-	cveIDAdtMap := make(map[string][]pkgAuditResult2)
+	cveIDAdtMap := make(map[string][]pkgAuditResult)
 	for _, p := range packAdtRslt {
-		for _, cid := range p.vulnIDCveIDs2.cveIDs {
+		for _, cid := range p.vulnIDCveIDs.cveIDs {
 			cveIDAdtMap[cid] = append(cveIDAdtMap[cid], p)
 		}
 	}
@@ -194,11 +194,10 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 		for _, r := range cveIDAdtMap[cveID] {
 			packs[r.pack.Name] = r.pack
 		}
-
 		disAdvs := []models.DistroAdvisory{}
 		for _, r := range cveIDAdtMap[cveID] {
 			disAdvs = append(disAdvs, models.DistroAdvisory{
-				AdvisoryID: r.vulnIDCveIDs2.vulnID,
+				AdvisoryID: r.vulnIDCveIDs.vulnID,
 			})
 		}
 
@@ -215,6 +214,7 @@ func (o *archlinux) scanUnsecurePackages() (models.VulnInfos, error) {
 			Confidence:       models.PkgAuditMatch,
 		}
 	}
+
 	return vinfos, nil
 }
 

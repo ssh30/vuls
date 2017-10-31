@@ -78,7 +78,7 @@ func (l *base) getPlatform() models.Platform {
 func (l *base) runningKernel() (release, version string, err error) {
 	r := l.exec("uname -r", noSudo)
 	if !r.isSuccess() {
-		return "", "", fmt.Errorf("Failed to SSH: %s", r)
+		return "", "", fmt.Errorf("Primero Failed to SSH: %s", r)
 	}
 	release = strings.TrimSpace(r.Stdout)
 
@@ -86,11 +86,16 @@ func (l *base) runningKernel() (release, version string, err error) {
 	case config.Debian:
 		r := l.exec("uname -a", noSudo)
 		if !r.isSuccess() {
-			return "", "", fmt.Errorf("Failed to SSH: %s", r)
+			return "", "", fmt.Errorf("Segundo Failed to SSH: %s", r)
 		}
 		ss := strings.Fields(r.Stdout)
 		if 6 < len(ss) {
 			version = ss[6]
+		}
+	case config.ArchLinux:
+		r := l.exec("uname -a", noSudo)
+		if !r.isSuccess() {
+			return "", "", fmt.Errorf("Meow Failed to SSH: %s", r)
 		}
 	}
 	return
