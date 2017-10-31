@@ -67,13 +67,26 @@ func detectArchLinux(c config.ServerInfo) (itsMe bool, archlinux osTypeInterface
 }
 
 func (o *archlinux) checkIfSudoNoPasswd() error {
-	// FreeBSD doesn't need root privilege
+	// on arch we can run arch-audit with regular priviledges
 	o.log.Infof("sudo ... No need")
 	return nil
 }
 
 func (o *archlinux) checkDependencies() error {
-	o.log.Infof("Dependencies... No need")
+	packNames := []string{}
+	packNames = append(packNames, "arch-audit")
+
+	o.log.Infof("Dependencies... we need arch-audit")
+
+	for _, name := range packNames {
+		cmd := "pacman -Qs " + name
+		if r := o.exec(cmd, noSudo); !r.isSuccess() {
+			msg := fmt.Sprintf("%s is not installed", name)
+			o.log.Errorf(msg)
+			return fmt.Errorf(msg)
+		}
+	}
+	o.log.Infof("Dependencies... Pass")
 	return nil
 }
 
