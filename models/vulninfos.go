@@ -553,6 +553,8 @@ func (v VulnInfo) VendorLinks(family string) map[string]string {
 			links["FreeBSD-VuXML"] = fmt.Sprintf("https://vuxml.freebsd.org/freebsd/%s.html", advisory.AdvisoryID)
 
 		}
+	case config.ArchLinux:
+		links["ArchLinux-CVE"] = "https://security.archlinux.org/" + v.CveID
 		return links
 	}
 	return links
